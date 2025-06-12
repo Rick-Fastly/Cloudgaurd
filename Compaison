@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Comparison: Check Point CloudGuard vs. Fastly</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Corporate Tech Neutral -->
+    <!-- Application Structure Plan: A single-page application with a fixed top navigation bar allowing users to jump to different sections: Overview, WAF, Bot Management, DDoS Protection, and Recommendations. This task-oriented structure allows users to either get a quick summary or dive deep into a specific area of interest. The side-by-side comparison format within each section is designed for direct, at-a-glance evaluation of features. Interactive charts provide a high-level visual summary, while collapsible text sections allow users to explore details without being overwhelmed. This design prioritizes usability and efficient information consumption over strictly following the report's linear structure. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Overall vendor comparison. Goal: Compare high-level strengths. Viz/Method: Radar Chart (Chart.js) for multi-axial comparison of core philosophies (e.g., Scalability, Cost). Interaction: Hover tooltips. Justification: Provides a quick, holistic visual summary of vendor strengths.
+        - Report Info: DDoS network capacity. Goal: Compare quantitative scale. Viz/Method: Bar Chart (Chart.js). Interaction: Hover tooltips. Justification: Clearly visualizes the significant difference in network capacity.
+        - Report Info: Architectural differences. Goal: Explain complex structures. Viz/Method: HTML/CSS diagrams with Tailwind. Interaction: Hover effects to show details. Justification: Simplifies complex concepts (Edge vs. Hybrid) into an easily understandable visual format.
+        - Report Info: Detailed feature lists. Goal: Inform & Compare. Viz/Method: Collapsible text blocks in side-by-side layout. Interaction: Click to expand/collapse. Justification: Keeps the UI clean and focused, allowing users to control the level of detail they see.
+        - Report Info: Key Differentiators. Goal: Highlight standout features. Viz/Method: Icon-based call-out cards. Interaction: Static display for emphasis. Justification: Draws user attention to the most critical selling points like "Zero Attack Fees".
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8F7F4;
+            color: #1f2937;
+        }
+        .nav-active {
+            color: #1D4ED8;
+            border-bottom-color: #1D4ED8;
+            font-weight: 600;
+        }
+        .nav-item {
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .nav-item:hover {
+            color: #1D4ED8;
+            border-bottom-color: #1D4ED8;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+                max-height: 400px;
+            }
+        }
+        .details-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out;
+        }
+        .details-toggle[aria-expanded="true"] + .details-content {
+            max-height: 1000px; 
+            transition: max-height 0.7s ease-in;
+        }
+        .details-toggle .arrow {
+            transition: transform 0.3s ease;
+        }
+        .details-toggle[aria-expanded="true"] .arrow {
+            transform: rotate(180deg);
+        }
+        .checkpoint-bg { background-color: #EFF6FF; }
+        .fastly-bg { background-color: #FEF2F2; }
+        .checkpoint-border { border-color: #3B82F6; }
+        .fastly-border { border-color: #EF4444; }
+        .checkpoint-text { color: #1E40AF; }
+        .fastly-text { color: #B91C1C; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-md">
+        <nav class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <h1 class="text-xl md:text-2xl font-bold text-gray-800">CloudGuard vs. Fastly</h1>
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="#overview" class="nav-item">Overview</a>
+                    <a href="#waf" class="nav-item">WAF</a>
+                    <a href="#bot" class="nav-item">Bot Management</a>
+                    <a href="#ddos" class="nav-item">DDoS</a>
+                    <a href="#recommendations" class="nav-item">Recommendations</a>
+                </div>
+                <div class="md:hidden">
+                    <select id="mobile-nav" class="bg-gray-200 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        <option value="#overview">Overview</option>
+                        <option value="#waf">WAF</option>
+                        <option value="#bot">Bot Management</option>
+                        <option value="#ddos">DDoS</option>
+                        <option value="#recommendations">Recommendations</option>
+                    </select>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8">
+        
+        <section id="overview" class="mb-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-4">Executive Summary & Core Philosophy</h2>
+            <p class="max-w-4xl mx-auto text-center text-gray-600 mb-12">
+                This comparison explores two leading security providers: Check Point CloudGuard, offering a comprehensive, integrated suite for diverse IT estates, and Fastly, delivering a high-performance, edge-native platform. This interactive tool helps you understand their distinct approaches to WAF, Bot, and DDoS protection to determine the best fit for your organization's needs.
+            </p>
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="card p-6">
+                    <h3 class="text-2xl font-bold mb-4 text-center">At-a-Glance Comparison</h3>
+                     <div class="chart-container">
+                        <canvas id="overviewRadarChart"></canvas>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-4 text-center">This chart offers a high-level comparison of the vendors' strategic strengths. Hover over points for details. Check Point excels in unified security for complex environments, while Fastly focuses on edge performance and cost predictability.</p>
+                </div>
+                <div class="space-y-8">
+                    <div class="card p-6 checkpoint-bg border-l-4 checkpoint-border">
+                         <h3 class="text-xl font-bold mb-2 checkpoint-text">Check Point: Infinity Total Protection</h3>
+                         <p class="text-gray-700">Check Point's philosophy is to provide a single, unified security architecture for an organization's entire IT landscape—network, cloud, mobile, and IoT. It appeals to enterprises seeking a consolidated vendor for consistent policy management across complex, hybrid environments, with a strong focus on automated threat prevention.</p>
+                    </div>
+                     <div class="card p-6 fastly-bg border-l-4 fastly-border">
+                         <h3 class="text-xl font-bold mb-2 fastly-text">Fastly: Edge Cloud Platform</h3>
+                         <p class="text-gray-700">Fastly's strategy is built on its global edge network, unifying application delivery and security. It prioritizes speed, ultra-low latency, and developer-friendliness. This approach is ideal for businesses where the performance of web applications and APIs is paramount, pushing security enforcement as close to the user as possible.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="waf" class="mb-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-4">WAF Comparison</h2>
+            <p class="max-w-4xl mx-auto text-center text-gray-600 mb-12">
+                A Web Application Firewall (WAF) is the first line of defense against application-layer attacks. Here we compare Check Point's AI-driven, pre-emptive protection against Fastly's edge-integrated, pattern-analysis approach. The key difference lies in their zero-day protection philosophy and deployment models.
+            </p>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="card p-6 flex flex-col">
+                    <h3 class="text-2xl font-bold checkpoint-text mb-4 text-center">Check Point CloudGuard WAF</h3>
+                    <div class="space-y-4 flex-grow">
+                        <div class="p-4 checkpoint-bg rounded-lg">
+                            <h4 class="font-bold">Core Technology</h4>
+                            <p class="text-sm">ML-based with Contextual AI. Aims for automated, "no-tuning" protection.</p>
+                        </div>
+                        <div class="p-4 checkpoint-bg rounded-lg">
+                            <h4 class="font-bold">Zero-Day Protection</h4>
+                            <p class="text-sm">Claims pre-emptive protection for threats like Log4Shell without requiring signature updates, relying on behavioral analysis.</p>
+                        </div>
+                        <div class="p-4 checkpoint-bg rounded-lg">
+                            <h4 class="font-bold">Deployment Models</h4>
+                            <p class="text-sm">Highly flexible: In-workload Nano Agents (for K8s, NGINX), Gateway VMs, and a fully managed WAF-as-a-Service for AWS.</p>
+                        </div>
+                    </div>
+                    <button class="details-toggle mt-6 text-blue-600 font-semibold flex items-center justify-center w-full" aria-expanded="false">
+                        <span>More Details</span>
+                        <span class="arrow ml-2">▼</span>
+                    </button>
+                    <div class="details-content mt-4 text-sm text-gray-600 space-y-2">
+                        <p><strong>API Security:</strong> Comprehensive auto-discovery and schema enforcement (OpenAPI v3+).</p>
+                        <p><strong>IPS:</strong> Includes a full Intrusion Prevention System for over 2,800 known web CVEs.</p>
+                        <p><strong>False Positives:</strong> Aims for "very minimal tuning and no false positives" due to its advanced AI model.</p>
+                        <p><strong>Management:</strong> Centralized via the Check Point Infinity Portal.</p>
+                    </div>
+                </div>
+                <div class="card p-6 flex flex-col">
+                    <h3 class="text-2xl font-bold fastly-text mb-4 text-center">Fastly Next-Gen WAF</h3>
+                    <div class="space-y-4 flex-grow">
+                        <div class="p-4 fastly-bg rounded-lg">
+                            <h4 class="font-bold">Core Technology</h4>
+                            <p class="text-sm">Signal Sciences tech with SmartParse to analyze complex request structures, reducing false positives.</p>
+                        </div>
+                        <div class="p-4 fastly-bg rounded-lg">
+                            <h4 class="font-bold">Zero-Day Protection</h4>
+                            <p class="text-sm">Leverages collective threat intelligence from its Network Learning Exchange (NLX) and advanced pattern detection.</p>
+                        </div>
+                        <div class="p-4 fastly-bg rounded-lg">
+                            <h4 class="font-bold">Deployment Models</h4>
+                            <p class="text-sm">Edge-native: Tightly integrated with the Fastly CDN at its global Points of Presence (POPs) for low-latency inspection.</p>
+                        </div>
+                    </div>
+                    <button class="details-toggle mt-6 text-red-600 font-semibold flex items-center justify-center w-full" aria-expanded="false">
+                        <span>More Details</span>
+                        <span class="arrow ml-2">▼</span>
+                    </button>
+                    <div class="details-content mt-4 text-sm text-gray-600 space-y-2">
+                        <p><strong>API Security:</strong> Customized protections for RESTful, SOAP, and GraphQL APIs.</p>
+                        <p><strong>Limitations:</strong> Inspects L7 (HTTP/S) only. WebSocket inspection requires Core WAF deployment.</p>
+                        <p><strong>False Positives:</strong> Recommends a 2-week monitoring period before blocking to fine-tune rules and avoid impacting legitimate traffic.</p>
+                         <p><strong>Management:</strong> Via Next-Gen WAF or Fastly control panels, plus full API control.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="bot" class="mb-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-4">Bot Management Comparison</h2>
+             <p class="max-w-4xl mx-auto text-center text-gray-600 mb-12">
+                Effective bot management distinguishes between good, bad, and human traffic to prevent fraud and resource abuse. Check Point integrates Anti-Bot as a WAF engine, whereas Fastly offers it as a specialized, add-on product with different detection and mitigation strategies.
+            </p>
+            <div class="grid md:grid-cols-2 gap-8">
+                 <div class="card p-6 flex flex-col">
+                    <h3 class="text-2xl font-bold checkpoint-text mb-4 text-center">Check Point Anti-Bot</h3>
+                    <div class="space-y-4 flex-grow">
+                        <div class="p-4 checkpoint-bg rounded-lg">
+                            <h4 class="font-bold">Product Structure</h4>
+                            <p class="text-sm">An integrated security engine within the CloudGuard WAF. Not a standalone product.</p>
+                        </div>
+                        <div class="p-4 checkpoint-bg rounded-lg">
+                            <h4 class="font-bold">Detection Method</h4>
+                            <p class="text-sm">Injects scripts on pages (e.g., login) to analyze behavioral patterns like keystrokes and mouse movements to identify bots.</p>
+                        </div>
+                        <div class="p-4 checkpoint-bg rounded-lg">
+                            <h4 class="font-bold">Customization</h4>
+                            <p class="text-sm">Fine-grained control by specifying exact URIs to protect, with modes like Detect, Prevent, or Disable.</p>
+                        </div>
+                    </div>
+                     <button class="details-toggle mt-6 text-blue-600 font-semibold flex items-center justify-center w-full" aria-expanded="false">
+                        <span>More Details</span>
+                        <span class="arrow ml-2">▼</span>
+                    </button>
+                    <div class="details-content mt-4 text-sm text-gray-600 space-y-2">
+                        <p><strong>Approach:</strong> Provides a streamlined, all-in-one solution for WAF and core bot protection.</p>
+                         <p><strong>Best For:</strong> Organizations needing solid, integrated bot protection for specific, sensitive workflows without the complexity of a separate product.</p>
+                    </div>
+                </div>
+                 <div class="card p-6 flex flex-col">
+                    <h3 class="text-2xl font-bold fastly-text mb-4 text-center">Fastly Bot Management</h3>
+                    <div class="space-y-4 flex-grow">
+                        <div class="p-4 fastly-bg rounded-lg">
+                            <h4 class="font-bold">Product Structure</h4>
+                            <p class="text-sm">A dedicated, specialized product available as an add-on to the Next-Gen WAF.</p>
+                        </div>
+                        <div class="p-4 fastly-bg rounded-lg">
+                            <h4 class="font-bold">Detection Method</h4>
+                            <p class="text-sm">Multi-faceted: combines client-side signals, server-side analysis, verified bot lists, and the NLX reputation feed.</p>
+                        </div>
+                        <div class="p-4 fastly-bg rounded-lg">
+                            <h4 class="font-bold">Mitigation Techniques</h4>
+                            <p class="text-sm">Multi-layered: uses Dynamic Challenges, custom rules, rate limiting, and IP blocking to stop sophisticated bots.</p>
+                        </div>
+                    </div>
+                    <button class="details-toggle mt-6 text-red-600 font-semibold flex items-center justify-center w-full" aria-expanded="false">
+                        <span>More Details</span>
+                        <span class="arrow ml-2">▼</span>
+                    </button>
+                    <div class="details-content mt-4 text-sm text-gray-600 space-y-2">
+                        <p><strong>Approach:</strong> Offers deeper, more granular control and advanced mitigation for organizations facing significant bot threats.</p>
+                         <p><strong>Best For:</strong> Businesses where sophisticated bot attacks (e.g., credential stuffing, scraping, denial of inventory) pose a major risk and require a dedicated defense.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="ddos" class="mb-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-4">DDoS Protection Comparison</h2>
+            <p class="max-w-4xl mx-auto text-center text-gray-600 mb-12">
+                Distributed Denial of Service (DDoS) protection is vital for ensuring service availability. The vendors differ fundamentally in architecture and pricing. Check Point offers flexible hybrid deployments with managed services, while Fastly leverages its massive edge network with a financially predictable "Zero Attack Fees" model.
+            </p>
+            <div class="grid xl:grid-cols-3 gap-8">
+                <div class="card p-6 xl:col-span-1">
+                    <h3 class="text-2xl font-bold text-center mb-4">Network Capacity (Tbps)</h3>
+                    <div class="chart-container" style="max-height:300px;">
+                        <canvas id="ddosCapacityChart"></canvas>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-4 text-center">This chart illustrates the difference in advertised global network capacity for DDoS mitigation. Fastly's significantly larger capacity is central to its edge-based absorption strategy.</p>
+                </div>
+                <div class="xl:col-span-2 grid md:grid-cols-2 gap-8">
+                     <div class="card p-6 flex flex-col">
+                        <h3 class="text-2xl font-bold checkpoint-text mb-4 text-center">Check Point Quantum DDoS Protector</h3>
+                        <div class="space-y-4 flex-grow">
+                           <div class="p-4 checkpoint-bg rounded-lg">
+                                <h4 class="font-bold">Architecture</h4>
+                                <p class="text-sm">Hybrid model: On-premise hardware appliances, cloud scrubbing centers, or a mix of both. Managed by an expert Emergency Response Team (ERT).</p>
+                            </div>
+                           <div class="p-4 checkpoint-bg rounded-lg">
+                                <h4 class="font-bold">SSL Mitigation</h4>
+                                <p class="text-sm">Offers keyless SSL/TLS flood mitigation, protecting encrypted attacks without requiring customer keys or adding latency.</p>
+                            </div>
+                           <div class="p-4 checkpoint-bg rounded-lg">
+                                <h4 class="font-bold">Pricing Model</h4>
+                                <p class="text-sm">Competitive market pricing, often bundled. Does not explicitly feature a "zero attack fees" model.</p>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="card p-6 flex flex-col">
+                        <h3 class="text-2xl font-bold fastly-text mb-4 text-center">Fastly DDoS Protection</h3>
+                        <div class="space-y-4 flex-grow">
+                           <div class="p-4 fastly-bg rounded-lg">
+                                <h4 class="font-bold">Architecture</h4>
+                                <p class="text-sm">Edge-native: Automatically absorbs attacks across its massive global network. "Always-on" mitigation enabled with one click.</p>
+                            </div>
+                           <div class="p-4 fastly-bg rounded-lg">
+                                <h4 class="font-bold">Key Differentiator</h4>
+                                <p class="text-sm">Provides "Attack Insights"—real-time, granular details on mitigation actions, enhancing transparency.</p>
+                            </div>
+                           <div class="p-4 fastly-bg rounded-lg">
+                                <h4 class="font-bold">Pricing Model</h4>
+                                <p class="text-sm font-semibold">"Zero Attack Fees". Customers are only billed for legitimate traffic, not attack traffic, providing cost predictability.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="recommendations" class="scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-4">Conclusion & Recommendations</h2>
+            <p class="max-w-4xl mx-auto text-center text-gray-600 mb-12">
+                The optimal choice depends entirely on your organization's architecture, operational model, risk profile, and budget. Both vendors offer robust, enterprise-grade security. Use the following profiles to guide your decision.
+            </p>
+            <div class="grid md:grid-cols-1 lg:grid-cols-2 gap-8">
+                 <div class="card p-8 checkpoint-bg border-t-4 checkpoint-border">
+                     <h3 class="text-xl font-bold mb-3 checkpoint-text">Choose Check Point If...</h3>
+                     <ul class="list-disc list-inside space-y-2 text-gray-700">
+                        <li>You require a unified security vendor across a diverse IT estate (hybrid cloud, on-premise, multi-cloud).</li>
+                        <li>You value a single management console for network, cloud, and endpoint security.</li>
+                        <li>You need flexible DDoS deployment options, including hardware appliances and high-touch managed services.</li>
+                        <li>Pre-emptive protection against novel, application-layer zero-days is your highest WAF priority.</li>
+                    </ul>
+                </div>
+                 <div class="card p-8 fastly-bg border-t-4 fastly-border">
+                    <h3 class="text-xl font-bold mb-3 fastly-text">Choose Fastly If...</h3>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700">
+                        <li>Your primary concern is the performance and low latency of high-traffic web apps and APIs.</li>
+                        <li>You want a developer-friendly, API-driven platform that integrates into CI/CD workflows.</li>
+                        <li>Budget predictability is critical, and the "Zero Attack Fees" for DDoS is a major financial benefit.</li>
+                        <li>You need real-time, transparent insights into how security threats are being mitigated at the edge.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-gray-800 text-white mt-16">
+        <div class="container mx-auto p-4 text-center text-sm">
+            <p>This is an interactive summary based on a comparative analysis report. All data is derived from the source document.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const data = {
+                overview: {
+                    labels: ['Unified Security', 'Edge Performance', 'Deployment Flexibility', 'Cost Predictability', 'Automated Protection', 'Developer Friendliness'],
+                    checkpoint: [9, 5, 9, 6, 8, 6],
+                    fastly: [6, 9, 7, 9, 7, 9]
+                },
+                ddos: {
+                    capacity: {
+                        checkpoint: 8,
+                        fastly: 400
+                    }
+                }
+            };
+            
+            new Chart(document.getElementById('overviewRadarChart'), {
+                type: 'radar',
+                data: {
+                    labels: data.overview.labels,
+                    datasets: [{
+                        label: 'Check Point CloudGuard',
+                        data: data.overview.checkpoint,
+                        fill: true,
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        pointBackgroundColor: 'rgb(59, 130, 246)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(59, 130, 246)'
+                    }, {
+                        label: 'Fastly',
+                        data: data.overview.fastly,
+                        fill: true,
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        borderColor: 'rgb(239, 68, 68)',
+                        pointBackgroundColor: 'rgb(239, 68, 68)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(239, 68, 68)'
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    elements: {
+                        line: {
+                            borderWidth: 3
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: false
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 10,
+                            pointLabels: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += context.raw;
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            new Chart(document.getElementById('ddosCapacityChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Check Point', 'Fastly'],
+                    datasets: [{
+                        label: 'Global Network Capacity (Tbps)',
+                        data: [data.ddos.capacity.checkpoint, data.ddos.capacity.fastly],
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.6)',
+                            'rgba(239, 68, 68, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgb(59, 130, 246)',
+                            'rgb(239, 68, 68)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Capacity in Tbps'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+
+            const detailsToggles = document.querySelectorAll('.details-toggle');
+            detailsToggles.forEach(toggle => {
+                toggle.addEventListener('click', () => {
+                    const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+                    toggle.setAttribute('aria-expanded', !isExpanded);
+                });
+            });
+            
+            const mobileNav = document.getElementById('mobile-nav');
+            mobileNav.addEventListener('change', (e) => {
+                window.location.hash = e.target.value;
+            });
+
+            const sections = document.querySelectorAll('section');
+            const navItems = document.querySelectorAll('.nav-item');
+            window.addEventListener('scroll', () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 80) {
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navItems.forEach(item => {
+                    item.classList.remove('nav-active');
+                    if (item.getAttribute('href') === `#${current}`) {
+                        item.classList.add('nav-active');
+                    }
+                });
+
+                if (current) {
+                    mobileNav.value = `#${current}`;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
